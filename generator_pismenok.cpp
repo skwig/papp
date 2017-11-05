@@ -86,14 +86,17 @@ void generovac_pismenok() {
         char pismenko = generuj_pismenko();
 
         std::unique_lock<std::mutex> tableLock(tableMutex);
-        while (tableCount == TABLE_SIZE) {
+        while (tableCount == TABLE_SIZE && run) {
             fullTableMonitor.wait(tableLock);
+        }
+
+        if (!run) {
+            break;
         }
 
         // umiestni pismenko na stol
         stol[pozicia_na_umiestnenie] = pismenko;
         tableCount++;
-//        totalGeneratedCount++;
 
         pozicia_na_umiestnenie = (pozicia_na_umiestnenie + 1) % 10;
 
@@ -110,13 +113,16 @@ void testovac_pismenok() {
     while (run) {
         // vzatie pismenka zo stola
         std::unique_lock<std::mutex> tableLock(tableMutex);
-        while (tableCount == 0) {
+        while (tableCount == 0 && run) {
             emptyTableMonitor.wait(tableLock);
+        }
+
+        if (!run) {
+            break;
         }
 
         char pismenko = stol[pozicia_na_zobratie];
         tableCount--;
-//        totalTestedCount++;
 
         pozicia_na_zobratie = (pozicia_na_zobratie + 1) % 10;
 
@@ -151,9 +157,10 @@ int main() {
     }
 
     std::this_thread::sleep_for(TOTAL_TIME);
-    run = false;
-
     std::cout << "Koniec" << std::endl;
+    run = false;
+    fullTableMonitor.notify_all();
+    emptyTableMonitor.notify_all();
 
     for (auto &gen : generovaci) {
         gen.join();
