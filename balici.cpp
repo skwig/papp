@@ -34,79 +34,160 @@ Poznamky:
 
 using namespace std::chrono_literals;
 
+char stol[10] = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
+int pozicia_na_umiestnenie = 0;
+int pozicia_na_zobratie = 0;
+
+bool run;
+
+const auto PACK_TIME = 2s;
+const auto SEND_TIME = 3s;
+const auto HELPER_SEND_TIME = 1s;
+const auto TOTAL_TIME = 30s;
+
+const int TESTER_COUNT = 10;
+const int GENERATOR_COUNT = 4;
+
+const int TABLE_SIZE = 10;
+
+int tableCount;
+
+int totalGeneratedCount;
+int totalTestedCount;
+
+std::mutex tableMutex;
+std::mutex helperMutex;
+
+std::condition_variable emptyTableMonitor;
+std::condition_variable fullTableMonitor;
+std::condition_variable helperMonitor;
+
+
 bool stop = false;
 
+bool helpersEnabled = false;
+
 //balic
-void zabal()
-{
-    //povodne 2
-    std::this_thread::sleep_for(2s);
+void zabal() {
+    std::this_thread::sleep_for(PACK_TIME);
 }
 
 //odosielatel
-void odosli()
-{
-    //povodne 3
-    std::this_thread::sleep_for(3s);
+void odosli() {
+    std::this_thread::sleep_for(SEND_TIME);
 }
 
 //pomocnik
-void odosli_pomocnik()
-{
-    //povodne 1
-    std::this_thread::sleep_for(1s);
+void odosli_pomocnik() {
+    std::this_thread::sleep_for(HELPER_SEND_TIME);
 }
 
-void balic(int id)
-{
-    while (!stop)
-    {
+void balic(int id) {
+    while (!stop) {
+        std::cout << "Balic c." << id << " zacina balit." << std::endl;
+
         zabal();
+
+        std::unique_lock<std::mutex> tableLock(tableMutex);
+        while (tableCount == TABLE_SIZE) {
+            fullTableMonitor.wait(tableLock);
+        }
+        tableCount++;
+
+        if (tableCount > 8) {
+            helpersEnabled = true;
+            helperMonitor.notify_all();
+        }
+
+        tableLock.unlock();
+
+        emptyTableMonitor.notify_one();
+        helperMonitor.notify_one();
+        std::cout << "Balic c." << id << " konci balit." << std::endl;
     }
 }
 
-void odosielatel(int id)
-{
-    while (!stop)
-    {
+void odosielatel(int id) {
+    while (!stop) {
+
+        std::unique_lock<std::mutex> tableLock(tableMutex);
+        std::cout << "Odosielatel c." << id << " zacina odosielat." << std::endl;
+        while (tableCount == 0) {
+            emptyTableMonitor.wait(tableLock);
+        }
+        tableCount--;
+        tableLock.unlock();
+
+        fullTableMonitor.notify_one();
+
         odosli();
+        std::cout << "Odosielatel c." << id << " konci odosielat." << std::endl;
     }
 }
 
-void pomocnik(int id)
-{
-    while (!stop)
-    {
+void pomocnik(int id) {
+    while (!stop) {
+
+        std::unique_lock<std::mutex> tableLock(tableMutex);
+        std::cout << "Pomocnik c." << id << " zacina pomahat & odosielat." << std::endl;
+        while (!helpersEnabled) {
+            helperMonitor.wait(tableLock);
+        }
+        tableCount--;
+
+        if (tableCount < 5) {
+            helpersEnabled = false;
+        }
+
+        tableLock.unlock();
+
+        fullTableMonitor.notify_one();
+
         odosli_pomocnik();
+        std::cout << "Pomocnik c." << id << " konci pomahat & odosielat." << std::endl;
     }
 }
 
-int main(void) {
+int main() {
     int i;
+
+    //
+    helpersEnabled = false;
+    tableCount = 0;
 
     std::thread balici[4];
     std::thread odosielatelia[4];
     std::thread pomocnici[2];
 
-    for (i = 0; i < 4; i++)
-        balici[i] = std::thread(balic, i+1);
-    for (i = 0; i < 4; i++)
-        odosielatelia[i] = std::thread(odosielatel, i+1);
-    for (i = 0; i < 2; i++)
-        pomocnici[i] = std::thread(pomocnik, i+1);
+    for (i = 0; i < 4; i++) {
+        balici[i] = std::thread(balic, i + 1);
+    }
 
-    std::this_thread::sleep_for(30s);
+    for (i = 0; i < 4; i++) {
+        odosielatelia[i] = std::thread(odosielatel, i + 1);
+    }
+
+    for (i = 0; i < 2; i++) {
+        pomocnici[i] = std::thread(pomocnik, i + 1);
+    }
+
+    std::this_thread::sleep_for(TOTAL_TIME);
 
     stop = true;
 
     std::cout << "---- Simulacia konci ----\n";
 
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++) {
         balici[i].join();
-    for (i = 0; i < 4; i++)
+    }
+
+    for (i = 0; i < 4; i++) {
         odosielatelia[i].join();
-    for (i = 0; i < 2; i++)
+    }
+
+    for (i = 0; i < 2; i++) {
         pomocnici[i].join();
+    }
 
     exit(EXIT_SUCCESS);
 }
