@@ -20,48 +20,139 @@ Poznamky:
 - build (console): gcc maliari.c -o maliari -lpthread
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h>
+#include <iostream>
+#include <thread>
+#include <condition_variable>
+#include <chrono>
 
+using namespace std::chrono_literals;
 
-// signal na zastavenie
-int stoj = 0;
+const auto WORK_TIME = 2s;
+const auto PAINT_TIME = 1s;
+const auto TOTAL_TIME = 30s;
+const auto BREAK_TIME = 2s;
+
+const int PAINTER_COUNT = 10;
+const int PAINTER_BREAK_COUNT = 3;
+const int PAINT_CAN_BREAK_AMOUNT = 4;
+
+int totalPaintCount;
+
+int breakCount;
+
+std::mutex paintMutex;
+std::mutex breakMutex;
+
+std::condition_variable breakMonitor;
+std::condition_variable breakBarrier;
+
+bool havingABreak = false;
+bool inBarrier = false;
+bool stop = false;
+
 
 // maliar - malovanie steny
-void maluj(void) {
-    sleep(2);
+void maluj() {
+    std::this_thread::sleep_for(WORK_TIME);
 }
 
 //  maliar - branie farby
-void ber(void) {
-    sleep(1);
+void ber() {
+
+    std::unique_lock<std::mutex> paintLock(paintMutex);
+    totalPaintCount++;
+    paintMutex.unlock();
+
+    std::this_thread::sleep_for(PAINT_TIME);
 }
 
 // maliar
-void *maliar( void *ptr ) {
+void maliar() {
+
+    int thisPaintCount = 0;
 
     // pokial nie je zastaveny
-    while(!stoj) {
+    while (!stop) {
         maluj();
+
+        if (stop) {
+            break;
+        }
+
         ber();
+
+        thisPaintCount++;
+
+        if (stop) {
+            break;
+        }
+
+        if (thisPaintCount % PAINT_CAN_BREAK_AMOUNT == 0) {
+            std::unique_lock<std::mutex> breakLock(breakMutex);
+//            while (havingABreak) {
+//                breakMonitor.wait(breakLock);
+//            }
+
+            // in
+            breakCount++;
+            if (breakCount != PAINTER_BREAK_COUNT) {
+                while (!inBarrier) { breakBarrier.wait(breakLock); }
+            } else {
+                havingABreak = true;
+                inBarrier = true;
+                breakBarrier.notify_all();
+            }
+
+            // out
+            breakCount--;
+            if (breakCount != 0) {
+                while (inBarrier) { breakBarrier.wait(breakLock); }
+            } else {
+                inBarrier = false;
+                breakBarrier.notify_all();
+            }
+
+
+            //
+            breakLock.unlock();
+
+            std::this_thread::sleep_for(BREAK_TIME);
+
+            havingABreak = false;
+
+            std::cout << breakCount << std::endl;
+
+//            breakMonitor.notify_all();
+        }
+
+
     }
-    return NULL;
+
+    std::cout << "Maliar minul " << thisPaintCount << std::endl;
 }
 
-int main(void) {
+int main() {
     int i;
 
-    pthread_t maliari[10];
 
-    for (i=0;i<10;i++) pthread_create(&maliari[i], NULL, &maliar, NULL);
+    totalPaintCount = 0;
 
-    sleep(30);
-    stoj = 1;
+    std::thread maliari[10];
 
-    for (i=0;i<10;i++) pthread_join(maliari[i], NULL);
+    for (i = 0; i < 10; i++) {
+        maliari[i] = std::thread(maliar);
+    }
+
+    std::this_thread::sleep_for(TOTAL_TIME);
+    stop = true;
+
+    std::cout << "Koniec simulacie" << std::endl;
+
+    for (auto &maliar : maliari) {
+        maliar.join();
+    }
+
+    std::cout << "Spolu minuli " << totalPaintCount << std::endl;
 
     exit(EXIT_SUCCESS);
 }
