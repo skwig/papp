@@ -3,9 +3,11 @@ Meno:
 Datum:
 
 Simulujte nasledujucu situaciu. Desiati maliari maluju steny.
-Maliarovi trva nejaky cas, kym stenu maluje (v simulacii 2s) a nejaky cas, kym si ide nabrat farbu do vedra (v simulacii 1s). Cela simulacia nech trva nejaky cas (30s).
+Maliarovi trva nejaky cas, kym stenu maluje (v simulacii 2s) a nejaky cas, kym si ide nabrat farbu do vedra (v simulacii 1s).
+Cela simulacia nech trva nejaky cas (30s).
 
-1. Doplnte do programu pocitadlo celkoveho poctu vedier minutej farby a tiez nech si kazdy maliar pocita, kolko vedier farby uz minul preniesol, na konci simulacie vypiste hodnoty pocitadiel. [2b]
+1. Doplnte do programu pocitadlo celkoveho poctu vedier minutej farby a tiez nech si kazdy maliar pocita,
+kolko vedier farby uz minul preniesol, na konci simulacie vypiste hodnoty pocitadiel. [2b]
 
 2. Ked maliar minie 4 vedra, pocka na dvoch svojich kolegov a kazdy si spravi prestavku na nejaky cas (v simulacii 2s). [5b]
 
