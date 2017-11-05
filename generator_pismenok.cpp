@@ -49,6 +49,9 @@ int totalTestedCount;
 
 std::mutex tableMutex;
 
+std::mutex generateMutex;
+std::mutex testMutex;
+
 std::condition_variable emptyTableMonitor;
 std::condition_variable fullTableMonitor;
 
@@ -56,12 +59,21 @@ std::condition_variable fullTableMonitor;
 // generovanie pismenka
 char generuj_pismenko() {
     std::this_thread::sleep_for(GENERATE_TIME);
+
+    std::unique_lock<std::mutex> generateLock(generateMutex);
+    totalGeneratedCount++;
+    generateLock.unlock();
+
     return 'A';
 }
 
 // testovanie pismenka
 void testuj_pismenko(char pismenko) {
     std::this_thread::sleep_for(TEST_TIME);
+
+    std::unique_lock<std::mutex> testLock(testMutex);
+    totalTestedCount++;
+    testLock.unlock();
 }
 
 // generator pismenok
@@ -81,7 +93,7 @@ void generovac_pismenok() {
         // umiestni pismenko na stol
         stol[pozicia_na_umiestnenie] = pismenko;
         tableCount++;
-        totalGeneratedCount++;
+//        totalGeneratedCount++;
 
         pozicia_na_umiestnenie = (pozicia_na_umiestnenie + 1) % 10;
 
@@ -104,7 +116,7 @@ void testovac_pismenok() {
 
         char pismenko = stol[pozicia_na_zobratie];
         tableCount--;
-        totalTestedCount++;
+//        totalTestedCount++;
 
         pozicia_na_zobratie = (pozicia_na_zobratie + 1) % 10;
 
@@ -140,6 +152,8 @@ int main() {
 
     std::this_thread::sleep_for(TOTAL_TIME);
     run = false;
+
+    std::cout << "Koniec" << std::endl;
 
     for (auto &gen : generovaci) {
         gen.join();
