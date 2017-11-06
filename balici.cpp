@@ -52,11 +52,18 @@ const int TABLE_SIZE = 10;
 
 int tableCount;
 
-int totalGeneratedCount;
-int totalTestedCount;
+int totalSentCount = 0;
+int totalHelperSentCount = 0;
+int totalPackedCount = 0;
 
 std::mutex tableMutex;
 std::mutex helperMutex;
+
+std::mutex packerCounterMutex;
+std::mutex senderCounterMutex;
+std::mutex helperCounterMutex;
+
+std::mutex printMutex;
 
 std::condition_variable emptyTableMonitor;
 std::condition_variable fullTableMonitor;
@@ -70,21 +77,35 @@ bool helpersEnabled = false;
 //balic
 void zabal() {
     std::this_thread::sleep_for(PACK_TIME);
+
+    std::unique_lock<std::mutex> lock(packerCounterMutex);
+    totalPackedCount++;
+    lock.unlock();
 }
 
 //odosielatel
 void odosli() {
     std::this_thread::sleep_for(SEND_TIME);
+
+    std::unique_lock<std::mutex> lock(senderCounterMutex);
+    totalSentCount++;
+    lock.unlock();
 }
 
 //pomocnik
 void odosli_pomocnik() {
     std::this_thread::sleep_for(HELPER_SEND_TIME);
+
+    std::unique_lock<std::mutex> lock(helperCounterMutex);
+    totalHelperSentCount++;
+    lock.unlock();
 }
 
 void balic(int id) {
     while (!stop) {
+        std::unique_lock<std::mutex> printLock(printMutex);
         std::cout << "Balic c." << id << " zacina balit." << std::endl;
+        printLock.unlock();
 
         zabal();
 
@@ -103,7 +124,10 @@ void balic(int id) {
 
         emptyTableMonitor.notify_one();
         helperMonitor.notify_one();
+
+        printLock.lock();
         std::cout << "Balic c." << id << " konci balit." << std::endl;
+        printLock.unlock();
     }
 }
 
@@ -111,7 +135,9 @@ void odosielatel(int id) {
     while (!stop) {
 
         std::unique_lock<std::mutex> tableLock(tableMutex);
+        std::unique_lock<std::mutex> printLock(printMutex);
         std::cout << "Odosielatel c." << id << " zacina odosielat." << std::endl;
+        printLock.unlock();
         while (tableCount == 0) {
             emptyTableMonitor.wait(tableLock);
         }
@@ -126,7 +152,10 @@ void odosielatel(int id) {
         fullTableMonitor.notify_one();
 
         odosli();
+
+        printLock.lock();
         std::cout << "Odosielatel c." << id << " konci odosielat." << std::endl;
+        printLock.unlock();
     }
 }
 
@@ -134,7 +163,9 @@ void pomocnik(int id) {
     while (!stop) {
 
         std::unique_lock<std::mutex> tableLock(tableMutex);
+        std::unique_lock<std::mutex> printLock(printMutex);
         std::cout << "Pomocnik c." << id << " zacina pomahat & odosielat." << std::endl;
+        printLock.unlock();
         while (!helpersEnabled) {
             helperMonitor.wait(tableLock);
         }
@@ -149,7 +180,10 @@ void pomocnik(int id) {
         fullTableMonitor.notify_one();
 
         odosli_pomocnik();
+
+        printLock.lock();
         std::cout << "Pomocnik c." << id << " konci pomahat & odosielat." << std::endl;
+        printLock.unlock();
     }
 }
 
@@ -193,6 +227,10 @@ int main() {
     for (i = 0; i < 2; i++) {
         pomocnici[i].join();
     }
+
+    std::cout << "Zabalenych: " << totalPackedCount << std::endl;
+    std::cout << "Odoslanych pracovnikmi: " << totalSentCount << std::endl;
+    std::cout << "Odoslanych pomocnikmi: " << totalHelperSentCount << std::endl;
 
     exit(EXIT_SUCCESS);
 }
