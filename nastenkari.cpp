@@ -21,66 +21,152 @@ Poznamky:
 - build (console): gcc nastenkari.c -o nastenkari -lpthread
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <unistd.h>
+// TODO: reader & writer, reader preference
+
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <mutex>
+#include <condition_variable>
+
+using namespace std::chrono_literals;
+
+const auto PREPARATION_TIME = 5s;
+const auto CHANGING_TIME = 3s;
+
+const auto READING_TIME = 1s;
+const auto WORKING_TIME = 2s;
+
+const auto TOTAL_TIME = 30s;
+
+int totalChangeCounter = 0;
+
+int employeeCount;
+int activenoticeBoardManCount;
+
+const int MAXIMUM_NASTENKAR = 1;
+
+std::mutex changeCounterMutex;
+
+std::mutex noticeBoardMutex;
+
+std::mutex activenoticeBoardManMutex;
+
+std::condition_variable noticeBoardMonitor;
+std::condition_variable activenoticeBoardManMonitor;
 
 // signal na zastavenie simulacie
-int stoj = 0;
+bool stoj = false;
 
 // nastenkar
-void nastenkar_men(void) {
-    sleep(3);
+void nastenkar_men() {
+    std::this_thread::sleep_for(CHANGING_TIME);
+
+    std::unique_lock<std::mutex> lock(changeCounterMutex);
+    totalChangeCounter++;
+    lock.unlock();
 }
 
-void nastenkar_pripravuj(void) {
-    sleep(5);
+void nastenkar_pripravuj() {
+    std::this_thread::sleep_for(PREPARATION_TIME);
 }
 
-void *nastenkar(void *ptr) {
+void nastenkar() {
 
-    while(!stoj) {
-        nastenkar_men();
+    while (!stoj) {
+
+        std::unique_lock<std::mutex> nastenkaLock(noticeBoardMutex);
+        noticeBoardMonitor.wait(nastenkaLock, [] { return employeeCount == 0; });
+
+
+        std::unique_lock<std::mutex> activeNastenkarLock(activenoticeBoardManMutex);
+        activenoticeBoardManMonitor.wait(activeNastenkarLock, [] { return activenoticeBoardManCount < MAXIMUM_NASTENKAR; });
+        activenoticeBoardManCount++;
+        activeNastenkarLock.unlock();
+
+        if (!stoj) {
+            nastenkar_men();
+        }
+
+        activeNastenkarLock.lock();
+        activenoticeBoardManCount--;
+        activeNastenkarLock.unlock();
+
+        nastenkaLock.unlock();
+
+        if (stoj) {
+            break;
+        }
+
         nastenkar_pripravuj();
     }
-    return NULL;
 }
 
 // zamestnanec
-void zamestnanec_citaj(void) {
-    sleep(1);
+void zamestnanec_citaj() {
+    std::this_thread::sleep_for(READING_TIME);
 }
 
-void zamestnanec_pracuj(void) {
-    sleep(2);
+void zamestnanec_pracuj() {
+    std::this_thread::sleep_for(WORKING_TIME);
 }
 
-void *zamestnanec(void *ptr) {
+void zamestnanec() {
 
-    while(!stoj) {
-        zamestnanec_citaj();
+    while (!stoj) {
+        std::unique_lock<std::mutex> nastenkaLock(noticeBoardMutex);
+        employeeCount++;
+        nastenkaLock.unlock();
+
+        if(!stoj){
+            zamestnanec_citaj();
+        }
+
+        nastenkaLock.lock();
+        employeeCount--;
+
+        if (employeeCount == 0) {
+            noticeBoardMonitor.notify_all();
+        }
+        nastenkaLock.unlock();
+
+        if (stoj) {
+            break;
+        }
+
         zamestnanec_pracuj();
     }
-    return NULL;
 }
 
 // main f.
-int main(void) {
+int main() {
     int i;
 
-    pthread_t nastenkari[2];
-    pthread_t zamestnanci[10];
+    std::thread nastenkari[2];
+    std::thread zamestnanci[10];
 
-    for (i=0;i<2;i++) pthread_create(&nastenkari[i], NULL, &nastenkar, NULL);
-    for (i=0;i<10;i++) pthread_create(&zamestnanci[i], NULL, &zamestnanec, NULL);
+    for (i = 0; i < 2; i++) {
+        nastenkari[i] = std::thread(nastenkar);
+    }
 
-    sleep(30);
-    stoj = 1;
+    for (i = 0; i < 10; i++) {
+        zamestnanci[i] = std::thread(zamestnanec);
+    }
 
-    for (i=0;i<2;i++) pthread_join(nastenkari[i], NULL);
-    for (i=0;i<10;i++) pthread_join(zamestnanci[i], NULL);
+    std::this_thread::sleep_for(TOTAL_TIME);
+
+    std::cout << "Koniec simulacie" << std::endl;
+    stoj = true;
+
+    for (auto &item : nastenkari) {
+        item.join();
+    }
+
+    for (auto &item : zamestnanci) {
+        item.join();
+    }
+
+    std::cout << "Pocet zmenenych nastenok " << totalChangeCounter << std::endl;
 
     exit(EXIT_SUCCESS);
 }
