@@ -116,6 +116,11 @@ void odosielatel(int id) {
             emptyTableMonitor.wait(tableLock);
         }
         tableCount--;
+
+        if (tableCount < 5) {
+            helpersEnabled = false;
+        }
+
         tableLock.unlock();
 
         fullTableMonitor.notify_one();

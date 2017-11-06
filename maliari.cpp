@@ -132,7 +132,11 @@ void maliar(int id) {
 
     }
 
+
+    // len aby to pekne vypisalo
+    std::unique_lock<std::mutex> paintLock(paintMutex);
     std::cout << "Maliar " << id << " minul " << thisPaintCount << std::endl;
+    paintMutex.unlock();
 }
 
 int main() {
@@ -141,9 +145,9 @@ int main() {
 
     totalPaintCount = 0;
 
-    std::thread maliari[10];
+    std::thread maliari[PAINTER_COUNT];
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < PAINTER_COUNT; i++) {
         maliari[i] = std::thread(maliar, i);
     }
 
