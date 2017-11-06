@@ -80,7 +80,8 @@ void nastenkar() {
 
 
         std::unique_lock<std::mutex> activeNastenkarLock(activenoticeBoardManMutex);
-        activenoticeBoardManMonitor.wait(activeNastenkarLock, [] { return activenoticeBoardManCount < MAXIMUM_NASTENKAR; });
+        activenoticeBoardManMonitor.wait(activeNastenkarLock,
+                                         [] { return activenoticeBoardManCount < MAXIMUM_NASTENKAR; });
         activenoticeBoardManCount++;
         activeNastenkarLock.unlock();
 
@@ -90,6 +91,7 @@ void nastenkar() {
 
         activeNastenkarLock.lock();
         activenoticeBoardManCount--;
+        activenoticeBoardManMonitor.notify_all();
         activeNastenkarLock.unlock();
 
         nastenkaLock.unlock();
@@ -118,7 +120,7 @@ void zamestnanec() {
         employeeCount++;
         nastenkaLock.unlock();
 
-        if(!stoj){
+        if (!stoj) {
             zamestnanec_citaj();
         }
 

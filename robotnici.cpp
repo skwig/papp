@@ -2,11 +2,13 @@
 Meno:
 Datum:
 
-Simulujte nasledujcu situaciu. Dvadsat robotnikov pracuje na stavbe. Kazdy robotnik nejaky cas pracuje (v simulacii 3s) a potom sa obcerstvuje v pohostinstve, kde si da jedno pivo (v simulacii 5s).
+Simulujte nasledujcu situaciu. Dvadsat robotnikov pracuje na stavbe. Kazdy robotnik nejaky cas pracuje (v simulacii 3s)
+ a potom sa obcerstvuje v pohostinstve, kde si da jedno pivo (v simulacii 5s).
 
 1. Doplnte do programu premennu pocitajucu celkovy pocet vypitych piv. [2b]
 
-2. Simulujte situacu, ze do pohostinstva sa zmesti iba desať robotnikov, ti co chcu pit a nezmestia sa, musia pockat pred pohostinstvom. [4b]
+2. Simulujte situacu, ze do pohostinstva sa zmesti iba desať robotnikov, ti co chcu pit a nezmestia sa, musia pockat
+ pred pohostinstvom. [4b]
 
 3. Zabezpecte, aby sa robotnici po obcerstveni vsetci pockali a az potom zacali pracovat. [4b]
 

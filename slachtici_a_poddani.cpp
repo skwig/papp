@@ -26,6 +26,8 @@ Poznamky:
 #include <condition_variable>
 #include <chrono>
 
+// TODO: reader & writer, writer preference
+
 using namespace std::chrono_literals;
 // signal na zastavenie simulacie
 bool stop = false;
