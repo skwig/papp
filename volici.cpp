@@ -18,6 +18,8 @@ Poznamky:
 - build (console): gcc volici.c -o volici -lpthread
 */
 
+// TODO limited shared resources
+
 #include <iostream>
 #include <thread>
 #include <chrono>

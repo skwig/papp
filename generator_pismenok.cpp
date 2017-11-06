@@ -18,6 +18,8 @@ Poznamky:
 - build (console): gcc generator_pismenok -o generator_pismenok -lpthread
 */
 
+// TODO producer & consumer
+
 #include <iostream>
 #include <thread>
 #include <chrono>

@@ -20,6 +20,8 @@ Poznamky:
 - build (console): gcc maliari.c -o maliari -lpthread
 */
 
+// TODO bariera
+
 #include <iostream>
 #include <thread>
 #include <condition_variable>

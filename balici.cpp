@@ -27,6 +27,8 @@ Poznamky:
 - build (console): gcc balici.c -o balici -lpthread
 */
 
+// TODO producer & consumer
+
 #include <iostream>
 #include <thread>
 #include <condition_variable>

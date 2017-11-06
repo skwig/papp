@@ -20,6 +20,8 @@ Poznamky:
 - build (console): gcc pekari.c -o pekari -lpthread
 */
 
+// TODO bariera
+
 #include <iostream>
 #include <thread>
 #include <chrono>

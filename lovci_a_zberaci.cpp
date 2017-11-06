@@ -20,6 +20,8 @@ Poznamky:
 - build (console): gcc lovci_a_zberaci.c -o lovci_a_zberaci -lpthread
 */
 
+// TODO reader & writer, rovnomerne
+
 #include <iostream>
 #include <thread>
 #include <condition_variable>
