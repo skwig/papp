@@ -46,7 +46,6 @@ std::mutex breakMutex;
 std::condition_variable breakMonitor;
 std::condition_variable breakBarrier;
 
-bool havingABreak = false;
 bool inBarrier = false;
 bool stop = false;
 
@@ -67,7 +66,7 @@ void ber() {
 }
 
 // maliar
-void maliar() {
+void maliar(int id) {
 
     int thisPaintCount = 0;
 
@@ -89,46 +88,51 @@ void maliar() {
 
         if (thisPaintCount % PAINT_CAN_BREAK_AMOUNT == 0) {
             std::unique_lock<std::mutex> breakLock(breakMutex);
-//            while (havingABreak) {
-//                breakMonitor.wait(breakLock);
-//            }
+            while (inBarrier && !stop) {
+                breakMonitor.wait(breakLock);
+            }
+
+            if (stop) {
+                break;
+            }
 
             // in
             breakCount++;
             if (breakCount != PAINTER_BREAK_COUNT) {
-                while (!inBarrier) { breakBarrier.wait(breakLock); }
+                while (!inBarrier && !stop) { breakBarrier.wait(breakLock); }
             } else {
-                havingABreak = true;
                 inBarrier = true;
                 breakBarrier.notify_all();
+            }
+
+            if (stop) {
+                break;
             }
 
             // out
             breakCount--;
             if (breakCount != 0) {
-                while (inBarrier) { breakBarrier.wait(breakLock); }
+                while (inBarrier && !stop) { breakBarrier.wait(breakLock); }
             } else {
                 inBarrier = false;
+                breakMonitor.notify_all();
                 breakBarrier.notify_all();
             }
-
 
             //
             breakLock.unlock();
 
+            if (stop) {
+                break;
+            }
+
             std::this_thread::sleep_for(BREAK_TIME);
-
-            havingABreak = false;
-
-            std::cout << breakCount << std::endl;
-
-//            breakMonitor.notify_all();
         }
 
 
     }
 
-    std::cout << "Maliar minul " << thisPaintCount << std::endl;
+    std::cout << "Maliar " << id << " minul " << thisPaintCount << std::endl;
 }
 
 int main() {
@@ -140,11 +144,13 @@ int main() {
     std::thread maliari[10];
 
     for (i = 0; i < 10; i++) {
-        maliari[i] = std::thread(maliar);
+        maliari[i] = std::thread(maliar, i);
     }
 
     std::this_thread::sleep_for(TOTAL_TIME);
     stop = true;
+    breakMonitor.notify_all();
+    breakBarrier.notify_all();
 
     std::cout << "Koniec simulacie" << std::endl;
 
