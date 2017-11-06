@@ -30,30 +30,31 @@ Poznamky:
 
 using namespace std::chrono_literals;
 
-// signal na zastavenie simulacie
-bool run = false;
-
 const auto PREPARATION_TIME = 4s;
-const auto BREAK_TIME = 4s;
 const auto BAKING_TIME = 2s;
 const auto TOTAL_TIME = 30s;
+const auto BREAK_TIME = 4s;
 
-const int BAKER_COUNT = 10;
-const int OVEN_COUNT = 4;
 const int BREAD_BREAK_COUNT = 2;
 
+const int OVEN_COUNT = 4;
+const int BAKER_COUNT = 10;
+
+int emptyOvenCount;
 int breadCount;
 int breakCount;
-int emptyOvenCount;
-
-bool inBarrier = false;
-
-std::mutex breadMutex;
-std::mutex breakMutex;
-std::mutex ovenMutex;
 
 std::condition_variable ovenMonitor;
+
+std::mutex ovenMutex;
+
+std::mutex breakMutex;
 std::condition_variable breakBarrier;
+bool inBarrier = false;
+
+
+// signal na zastavenie simulacie
+bool run = true;
 
 // pekar
 void priprava() {
@@ -63,9 +64,11 @@ void priprava() {
 void pecenie() {
 
     std::unique_lock<std::mutex> ovenLock(ovenMutex);
+
     while (emptyOvenCount <= 0) {
         ovenMonitor.wait(ovenLock);
     }
+
     emptyOvenCount--;
     ovenLock.unlock();
 
@@ -77,9 +80,11 @@ void pecenie() {
     ovenLock.unlock();
 
     ovenMonitor.notify_all();
+
 }
 
 void pekar() {
+
     int bakerBreadCount = 0;
 
     while (run) {
@@ -119,45 +124,29 @@ void pekar() {
             //
             std::this_thread::sleep_for(BREAK_TIME);
         }
-
     }
 }
 
 int main() {
+    int i;
 
-
-    //
     emptyOvenCount = OVEN_COUNT;
     breadCount = 0;
-    breakCount = 0;
+    std::thread pekari[10];
 
-    //
-    std::thread pekari[BAKER_COUNT];
-
-    for (int i = 0; i < BAKER_COUNT; ++i) {
+    for (i = 0; i < 10; i++) {
         pekari[i] = std::thread(pekar);
     }
 
     std::this_thread::sleep_for(TOTAL_TIME);
+
     run = false;
 
-    for (auto &pekar : pekari) {
-        pekar.join();
+    for (i = 0; i < 10; i++) {
+        pekari[i].join();
     }
 
     std::cout << "Total bread count " << breadCount << std::endl;
-
-//    int i;
-//
-//    pthread_t pekari[10];
-//
-//    for (i=0;i<10;i++) pthread_create( &pekari[i], NULL, &pekar, NULL);
-//
-//    sleep(30);
-//    stoj = 1;
-//
-//    for (i=0;i<10;i++) pthread_join( pekari[i], NULL);
-
 
     exit(EXIT_SUCCESS);
 }
