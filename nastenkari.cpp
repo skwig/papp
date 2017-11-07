@@ -117,6 +117,7 @@ void zamestnanec() {
 
     while (!stoj) {
         std::unique_lock<std::mutex> nastenkaLock(noticeBoardMutex);
+
         employeeCount++;
         nastenkaLock.unlock();
 
