@@ -48,9 +48,6 @@ bool inBarrier = false;
 int totalBigCounter = 0;
 int totalSmallCounter = 0;
 
-std::mutex totalBigMutex;
-std::mutex totalSmallMutex;
-
 std::mutex windowMutex;
 std::mutex printMutex;
 
@@ -75,12 +72,11 @@ void oknar(int id) {
     while (true) {
 
         std::unique_lock<std::mutex> windowLock(windowMutex);
+        windowQueue.wait(windowLock, [] { return !inBarrier; });
 
         if (currentWindow >= windowCount) {
             break;
         }
-
-        windowQueue.wait(windowLock, [] { return !inBarrier; });
 
         const bool isBig = (okna[currentWindow] == 'V');
         const int workersNeeded = isBig ? BIG_WINDOW_WORKERS : SMALL_WINDOW_WORKERS;
