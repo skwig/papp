@@ -32,8 +32,6 @@ const auto MAN_BREAK_TIME = 2s;
 const auto WOMAN_RUNNING_TIME = 3s;
 const auto WOMAN_BREAK_TIME = 3s;
 
-const int MAXIMUM_LAP_COUNT = 10;
-
 int runningCount = 20;
 
 int totalLapCounter = 0;
@@ -64,11 +62,12 @@ void muz_oddychuj(void) {
 void muz(int id) {
 
     int lapCount = 0;
+    const int maximumLapCount = 15;
 
     while (!stoj) {
 
-        if (lapCount == MAXIMUM_LAP_COUNT) {
-            std::cout << "Muz " << id << " skoncila." << std::endl;
+        if (lapCount == maximumLapCount) {
+            std::cout << "Muz " << id << " skoncil." << std::endl;
             break;
         }
 
@@ -86,7 +85,7 @@ void muz(int id) {
         }
 
         // bude toto moje posledne kolo?
-        if (lapCount + 1 == MAXIMUM_LAP_COUNT) {
+        if (lapCount + 1 == maximumLapCount) {
             runningCount--;
         }
 
@@ -128,9 +127,10 @@ void zena_oddychuj() {
 void zena(int id) {
 
     int lapCount = 0;
+    const int maximumLapCount = 10;
 
     while (!stoj) {
-        if (lapCount == MAXIMUM_LAP_COUNT) {
+        if (lapCount == maximumLapCount) {
             std::cout << "Zena " << id << " skoncila." << std::endl;
             break;
         }
@@ -149,7 +149,7 @@ void zena(int id) {
         }
 
         // bude toto moje posledne kolo?
-        if (lapCount + 1 == MAXIMUM_LAP_COUNT) {
+        if (lapCount + 1 == maximumLapCount) {
             runningCount--;
         }
 
