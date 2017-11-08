@@ -37,7 +37,6 @@ const auto PROGRAMMING_BREAK_TIME = 2s;
 const auto TESTING_TIME_FAST = 2s;
 const auto TESTING_TIME_SLOW = 3s;
 const auto TESTING_BREAK_TIME = 3s;
-
 const auto TOTAL_TIME = 30s;
 
 const int PROGRAMMER_COUNT = 7;
@@ -47,16 +46,16 @@ const int FAST_TESTER_COUNT = 3;
 int totalTestedCount = 0;
 int totalProgrammedCount = 0;
 
-int programmerCount = 0;
-int testerCount = 0;
-
 std::mutex totalTesterCounterMutex;
 std::mutex totalProgrammerCounterMutex;
 
+int programmerCount = 0;
+int testerCount = 0;
+
 std::mutex workMutex;
 
-std::condition_variable noProgrammerCond;
-std::condition_variable noTesterCond;
+std::condition_variable programmerCond;
+std::condition_variable testerCond;
 
 bool inSlowBarrier = false;
 bool inFastBarrier = false;
@@ -117,13 +116,14 @@ void programator() {
         std::unique_lock<std::mutex> workLock(workMutex);
 
         while (!stoj && (testerCount != 0)) {
-            noTesterCond.wait(workLock);
+            testerCond.wait(workLock);
         }
 
         if (stoj) {
             break;
         }
 
+//        std::cout << "Programator zacina pracovat" << std::endl;
         programmerCount++;
 
         workLock.unlock();
@@ -135,9 +135,10 @@ void programator() {
 
         //
         workLock.lock();
+//        std::cout << "Programator prestava pracovat" << std::endl;
         programmerCount--;
         if (testerCount == 0) {
-            noProgrammerCond.notify_all();
+            programmerCond.notify_all();
         }
         workLock.unlock();
 
@@ -146,7 +147,6 @@ void programator() {
         }
 
         prestavka_programator();
-
     }
 }
 
@@ -157,13 +157,14 @@ void tester_rychly() {
         std::unique_lock<std::mutex> workLock(workMutex);
 
         while (!stoj && (programmerCount != 0)) {
-            noProgrammerCond.wait(workLock);
+            programmerCond.wait(workLock);
         }
 
         if (stoj) {
             break;
         }
 
+//        std::cout << "Rychly tester zacina pracovat" << std::endl;
         testerCount++;
 
         workLock.unlock();
@@ -173,9 +174,10 @@ void tester_rychly() {
         }
 
         workLock.lock();
+//        std::cout << "Rychly tester prestava pracovat" << std::endl;
         testerCount--;
         if (programmerCount == 0) {
-            noTesterCond.notify_all();
+            testerCond.notify_all();
         }
         workLock.unlock();
 
@@ -211,6 +213,7 @@ void tester_rychly() {
         } else {
             inFastBarrier = false;
             fastTesterBarrierCond.notify_all();
+//            std::cout << "Zacina rychla prestavka" << std::endl;
         }
 
         if (stoj) {
@@ -231,13 +234,14 @@ void tester_pomaly() {
         std::unique_lock<std::mutex> workLock(workMutex);
 
         while (!stoj && (programmerCount != 0)) {
-            noProgrammerCond.wait(workLock);
+            programmerCond.wait(workLock);
         }
 
         if (stoj) {
             break;
         }
 
+//        std::cout << "Pomaly tester zacina pracovat" << std::endl;
         testerCount++;
 
         workLock.unlock();
@@ -247,9 +251,10 @@ void tester_pomaly() {
         }
 
         workLock.lock();
+//        std::cout << "Pomaly tester prestava pracovat" << std::endl;
         testerCount--;
         if (programmerCount == 0) {
-            noTesterCond.notify_all();
+            testerCond.notify_all();
         }
         workLock.unlock();
 
@@ -285,6 +290,7 @@ void tester_pomaly() {
         } else {
             inSlowBarrier = false;
             slowTesterBarrierCond.notify_all();
+//            std::cout << "Zacina pomala prestavka" << std::endl;
         }
 
         if (stoj) {
@@ -317,11 +323,8 @@ int main() {
         testeri_pomali[i] = std::thread(tester_pomaly);
     }
 
-
     std::this_thread::sleep_for(TOTAL_TIME);
-
     std::cout << "Simulacia konci" << std::endl;
-
     stoj = true;
 
     for (i = 0; i < PROGRAMMER_COUNT; ++i) {
@@ -336,6 +339,7 @@ int main() {
         testeri_pomali[i].join();
     }
 
+    // 25 a 35
     std::cout << "Celkovy pocet testovani: " << totalTestedCount << std::endl;
     std::cout << "Celkovy pocet programovani: " << totalProgrammedCount << std::endl;
 
