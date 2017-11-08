@@ -20,6 +20,8 @@ Poznamky:
 - build (console): gcc sportovci.c -o sportovci -lpthread
 */
 
+// TODO: bariera
+
 #include <iostream>
 #include <thread>
 #include <condition_variable>

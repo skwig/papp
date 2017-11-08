@@ -20,5 +20,7 @@ add_executable(nastenkari nastenkari.cpp)
 add_executable(dlazdici dlazdici.cpp)
 add_executable(murari_2013 murari_2013.cpp)
 add_executable(testeri_programatori testeri_programatori.cpp)
+add_executable(grafici grafici.cpp)
+add_executable(zapocet zapocet.cpp)
 #add_executable()
 
